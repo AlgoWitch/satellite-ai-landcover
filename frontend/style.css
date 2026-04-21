@@ -1,0 +1,223 @@
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #f9fafb;
+    color: #1f2937;
+}
+
+/* NAVBAR */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 60px;
+    background: white;
+    border-radius: 20px;
+    margin: 20px;
+}
+
+.logo {
+    font-weight: 600;
+    font-size: 20px;
+    color: #6366f1;
+}
+
+.nav-links a {
+    margin-left: 25px;
+    text-decoration: none;
+    color: #374151;
+    font-weight: 500;
+}
+
+.nav-links a:hover {
+    color: #6366f1;
+}
+
+/* HERO */
+.hero {
+    position: relative;
+    height: 90vh;
+    display: flex;
+    align-items: center;
+    padding: 0 80px;
+    background: url("assets/hero.png") no-repeat center/cover;
+    border-radius: 30px;
+    margin: 20px;
+}
+
+.hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        90deg,
+        rgba(255,255,255,0.9),
+        rgba(255,240,245,0.7),
+        rgba(255,255,255,0.2)
+    );
+    border-radius: 30px;
+}
+
+.hero-content {
+    position: relative;
+    max-width: 600px;
+    z-index: 2;
+}
+
+.hero-content h1 {
+    font-size: 54px;
+    line-height: 1.2;
+}
+
+/* GRADIENT TEXT */
+.gradient-text {
+    background: linear-gradient(90deg, #6366f1, #ec4899);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.hero-content p {
+    margin-top: 15px;
+    font-size: 18px;
+    color: #4b5563;
+}
+
+/* BUTTONS */
+.buttons {
+    margin-top: 25px;
+}
+
+.btn-primary {
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #6366f1, #ec4899);
+    color: white;
+    border-radius: 25px;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.btn-secondary {
+    padding: 12px 24px;
+    border: 1px solid #6366f1;
+    border-radius: 25px;
+    text-decoration: none;
+    color: #6366f1;
+}
+
+.btn-secondary:hover {
+    background: #eef2ff;
+}
+
+/* BLOG */
+.blog-container {
+    max-width: 900px;
+    margin: auto;
+    padding: 60px 20px;
+}
+
+.blog-section {
+    margin-bottom: 50px;
+}
+
+.blog-section h2 {
+    background: linear-gradient(90deg, #6366f1, #ec4899);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.blog-section p {
+    line-height: 1.8;
+    color: #374151;
+}
+
+/* ANALYSIS HEADER */
+.analysis-header {
+    text-align: center;
+    padding: 100px 20px 60px;
+    background: linear-gradient(135deg, #eef2ff, #fdf2f8);
+    border-radius: 30px;
+    margin: 20px;
+}
+
+.analysis-header h1 {
+    font-size: 42px;
+}
+
+.analysis-header span {
+    background: linear-gradient(90deg, #6366f1, #ec4899);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.analysis-header p {
+    color: #6b7280;
+}
+
+/* ANALYSIS CONTAINER */
+.analysis-container {
+    max-width: 900px;
+    margin: auto;
+    padding: 40px 20px;
+}
+
+/* CARDS */
+.card {
+    background: linear-gradient(135deg, #ffffff, #f8fafc);
+    padding: 28px;
+    border-radius: 18px;
+    border: 1px solid #e5e7eb;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+}
+
+.card h2 {
+    background: linear-gradient(90deg, #6366f1, #ec4899);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.card p {
+    color: #4b5563;
+    line-height: 1.7;
+}
+
+/* UPLOAD GRID */
+.upload-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+/* CUSTOM UPLOAD */
+.file-upload {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    border-radius: 18px;
+    border: 2px dashed #c7d2fe;
+    background: linear-gradient(135deg, #eef2ff, #fdf2f8);
+    cursor: pointer;
+    transition: 0.3s ease;
+}
+
+.file-upload:hover {
+    border-color: #6366f1;
+    transform: translateY(-2px);
+}
+
+.file-upload input {
+    display: none;
+}
+
+.file-upload-text {
+    font-size: 16px;
+    font-weight: 500;
+    color: #6366f1;
+}
+
+.file-upload-subtext {
+    font-size: 13px;
+    color: #9ca3af;
+}

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Analysis</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="navbar">
+    <div class="logo">SatelliteTech</div>
+    <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="analysis.html">Analysis</a>
+    </div>
+</div>
+
+<div class="analysis-header">
+    <h1>Satellite <span>Analysis</span></h1>
+    <p>Upload satellite images to detect vegetation and land-use changes</p>
+</div>
+
+<div class="analysis-container">
+
+    <div class="card">
+        <h2>Upload Requirements</h2>
+        <p>
+        • File format: .tif<br>
+        • Same location<br>
+        • Include NIR & Red bands<br>
+        • Similar resolution
+        </p>
+    </div>
+
+    <div class="card">
+        <h2>Upload Images</h2>
+
+        <div class="upload-grid">
+
+            <label class="file-upload">
+                <div class="file-upload-text">Upload Before Image</div>
+                <div class="file-upload-subtext">.tif format required</div>
+                <input type="file">
+            </label>
+
+            <label class="file-upload">
+                <div class="file-upload-text">Upload After Image</div>
+                <div class="file-upload-subtext">.tif format required</div>
+                <input type="file">
+            </label>
+
+        </div>
+
+    </div>
+
+    <div class="card">
+        <h2>Results</h2>
+        <p>Results will appear after backend integration.</p>
+    </div>
+
+</div>
+
+</body>
+</html>
