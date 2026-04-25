@@ -17,12 +17,12 @@ Monitoring changes in land use and environmental conditions manually is slow, ex
 
 Governments, researchers, planners, and organizations often need timely insights regarding:
 
-- Urban expansion
-- Vegetation loss
-- Water-body movement
-- Land transformation
-- Environmental degradation
-- Infrastructure growth
+- Urban expansion  
+- Vegetation loss  
+- Water-body movement  
+- Land transformation  
+- Environmental degradation  
+- Infrastructure growth  
 
 This platform automates that process using satellite imagery.
 
@@ -31,28 +31,33 @@ This platform automates that process using satellite imagery.
 ## Key Features
 
 ### Multi-Temporal Satellite Analysis
+
 Upload two satellite images of the same region from different dates.
 
 ### Automated Land Classification
+
 Classifies terrain into the following categories:
 
-- Vegetation
-- Other Land
-- Water
+- Vegetation  
+- Other Land  
+- Water  
 
 ### Change Detection Engine
+
 Measures change percentages between the two periods.
 
 ### Intelligence Dashboard
+
 Provides:
 
-- KPI summaries
-- Comparative graphs
-- Before and after classified maps
-- Change detection maps
-- Analytical mission summary
+- KPI summaries  
+- Comparative graphs  
+- Before and after classified maps  
+- Change detection maps  
+- Analytical mission summary  
 
 ### Real-Time Web Interface
+
 Interactive frontend connected to a Flask backend API.
 
 ---
@@ -61,33 +66,33 @@ Interactive frontend connected to a Flask backend API.
 
 ### Frontend
 
-- HTML5
-- CSS3
-- JavaScript
-- Chart.js
+- HTML5  
+- CSS3  
+- JavaScript  
+- Chart.js  
 
 ### Backend
 
-- Python
-- Flask
-- Flask-CORS
+- Python  
+- Flask  
+- Flask-CORS  
 
 ### Machine Learning / Data Processing
 
-- Scikit-learn
-- NumPy
-- Pandas
-- Rasterio
-- Joblib
-- Matplotlib
+- Scikit-learn  
+- NumPy  
+- Pandas  
+- Rasterio  
+- Joblib  
+- Matplotlib  
 
 ### Deployment
 
-- Vercel (Frontend)
-- Render (Backend)
+- Vercel (Frontend)  
+- Render (Backend)  
 
 ---
-```
+
 ## System Architecture
 
 ```text
@@ -145,8 +150,8 @@ README.md
 
 ## Workflow
 
-1. User uploads "Before" satellite image.
-2. User uploads "After" satellite image.
+1. User uploads the **Before** satellite image.
+2. User uploads the **After** satellite image.
 3. Backend reads raster data.
 4. Features are extracted from image bands.
 5. Trained model predicts terrain classes.
@@ -255,7 +260,6 @@ This project showcases:
 ## Author
 
 Shreya Suman
-
 B.Tech Computer Science (Data Science)
 
 Interests: AI, Data Analytics, Geospatial Intelligence, Ethical Technology
