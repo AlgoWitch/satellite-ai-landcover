@@ -87,7 +87,7 @@ Interactive frontend connected to a Flask backend API.
 - Render (Backend)
 
 ---
-
+```
 ## System Architecture
 
 ```text
