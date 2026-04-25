@@ -1,0 +1,155 @@
+# ==========================================
+# backend/predict.py
+# PREMIUM FINAL VERSION
+# Saves:
+# before map
+# after map
+# change map
+# results json
+# ==========================================
+
+import numpy as np
+import rasterio
+import matplotlib.pyplot as plt
+import os
+import json
+import sys
+
+# ---------------------------------
+# CONFIG
+# ---------------------------------
+DATA_DIR = "../uploads"
+OUTPUT_DIR = "../outputs"
+
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+city = sys.argv[1] if len(sys.argv) > 1 else "custom"
+
+before_path = f"{DATA_DIR}/before_{city}.tif"
+after_path  = f"{DATA_DIR}/after_{city}.tif"
+
+# ---------------------------------
+# LOAD TIFF
+# ---------------------------------
+def load_tif(path):
+    with rasterio.open(path) as src:
+        img = src.read()
+        img = np.transpose(img, (1,2,0))
+        img = img.astype(np.float32)
+
+    img = np.nan_to_num(img, nan=0.0)
+    img = img / 10000.0
+    img = np.clip(img, 0, 1)
+
+    return img
+
+# ---------------------------------
+# CLASSIFY
+# 0 Vegetation
+# 1 Other Land
+# 2 Water
+# ---------------------------------
+def classify_scene(img):
+
+    nir = img[:, :, 0]
+    red = img[:, :, 1]
+    green = img[:, :, 2]
+
+    ndvi = (nir - red) / (nir + red + 1e-5)
+    ndwi = (green - nir) / (green + nir + 1e-5)
+
+    pred = np.ones((img.shape[0], img.shape[1]), dtype=np.uint8)
+
+    pred[ndvi > 0.28] = 0
+    pred[ndwi > 0.12] = 2
+
+    return pred
+
+# ---------------------------------
+# SAVE CLASS MAP
+# ---------------------------------
+def save_map(pred, path):
+
+    rgb = np.zeros((pred.shape[0], pred.shape[1], 3))
+
+    rgb[pred == 0] = [0.0, 0.75, 0.2]   # vegetation
+    rgb[pred == 1] = [0.75, 0.75, 0.75] # land
+    rgb[pred == 2] = [0.0, 0.4, 1.0]    # water
+
+    plt.figure(figsize=(8,8))
+    plt.imshow(rgb)
+    plt.axis("off")
+    plt.tight_layout()
+    plt.savefig(path, dpi=220, bbox_inches="tight")
+    plt.close()
+
+# ---------------------------------
+# SAVE CHANGE MAP
+# ---------------------------------
+def save_change_map(before, after, path):
+
+    rgb = np.zeros((before.shape[0], before.shape[1], 3))
+
+    changed = before != after
+
+    rgb[:] = [0.92, 0.92, 0.92]     # no change
+    rgb[changed] = [1.0, 0.15, 0.15] # changed
+
+    plt.figure(figsize=(8,8))
+    plt.imshow(rgb)
+    plt.axis("off")
+    plt.tight_layout()
+    plt.savefig(path, dpi=220, bbox_inches="tight")
+    plt.close()
+
+# ---------------------------------
+# PERCENTAGES
+# ---------------------------------
+def stats(pred):
+
+    total = pred.size
+
+    return {
+        "Vegetation": round(np.sum(pred == 0)/total*100,2),
+        "Other Land": round(np.sum(pred == 1)/total*100,2),
+        "Water": round(np.sum(pred == 2)/total*100,2)
+    }
+
+# ---------------------------------
+# MAIN
+# ---------------------------------
+before_img = load_tif(before_path)
+after_img = load_tif(after_path)
+
+before = classify_scene(before_img)
+after = classify_scene(after_img)
+
+save_map(before, f"{OUTPUT_DIR}/{city}_before_map.png")
+save_map(after, f"{OUTPUT_DIR}/{city}_after_map.png")
+save_change_map(before, after, f"{OUTPUT_DIR}/{city}_change_map.png")
+
+b = stats(before)
+a = stats(after)
+
+change = {
+    "Vegetation Change %": round(a["Vegetation"]-b["Vegetation"],2),
+    "Other Land Change %": round(a["Other Land"]-b["Other Land"],2),
+    "Water Change %": round(a["Water"]-b["Water"],2)
+}
+
+results = {
+    "city": city,
+    "before": b,
+    "after": a,
+    "change": change,
+    "maps": {
+        "before": f"../outputs/{city}_before_map.png",
+        "after": f"../outputs/{city}_after_map.png",
+        "change": f"../outputs/{city}_change_map.png"
+    }
+}
+
+with open(f"{OUTPUT_DIR}/{city}_results.json", "w") as f:
+    json.dump(results, f, indent=4)
+
+print("Premium prediction complete.")

@@ -1,64 +1,283 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Analysis</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Satellite Analysis</title>
+<link rel="stylesheet" href="style.css">
+
+<style>
+
+/* EXTRA PREMIUM UI */
+
+.stats-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:18px;
+    margin-top:20px;
+}
+
+.stat-card{
+    padding:22px;
+    border-radius:18px;
+    color:white;
+    font-weight:600;
+    box-shadow:0 10px 30px rgba(0,0,0,0.08);
+}
+
+.green-card{
+    background:linear-gradient(135deg,#16a34a,#22c55e);
+}
+
+.gray-card{
+    background:linear-gradient(135deg,#4b5563,#6b7280);
+}
+
+.blue-card{
+    background:linear-gradient(135deg,#2563eb,#3b82f6);
+}
+
+.map-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+    gap:20px;
+    margin-top:25px;
+}
+
+.map-box{
+    background:#f8fafc;
+    border-radius:18px;
+    padding:15px;
+    border:1px solid #e5e7eb;
+}
+
+.map-box img{
+    width:100%;
+    border-radius:14px;
+    margin-top:12px;
+}
+
+.map-title{
+    font-weight:600;
+    color:#111827;
+}
+
+.loading-spin{
+    color:#6366f1;
+    font-weight:600;
+}
+
+</style>
 </head>
 
 <body>
 
+<!-- NAVBAR -->
 <div class="navbar">
     <div class="logo">SatelliteTech</div>
+
     <div class="nav-links">
         <a href="index.html">Home</a>
         <a href="analysis.html">Analysis</a>
     </div>
 </div>
 
+<!-- HEADER -->
 <div class="analysis-header">
     <h1>Satellite <span>Analysis</span></h1>
-    <p>Upload satellite images to detect vegetation and land-use changes</p>
+    <p>
+        Upload before and after satellite images to detect land transformation,
+        vegetation loss and water changes.
+    </p>
 </div>
 
+<!-- MAIN -->
 <div class="analysis-container">
 
+    <!-- UPLOAD CARD -->
     <div class="card">
-        <h2>Upload Requirements</h2>
-        <p>
-        • File format: .tif<br>
-        • Same location<br>
-        • Include NIR & Red bands<br>
-        • Similar resolution
-        </p>
-    </div>
 
-    <div class="card">
         <h2>Upload Images</h2>
 
         <div class="upload-grid">
 
+            <!-- BEFORE -->
             <label class="file-upload">
                 <div class="file-upload-text">Upload Before Image</div>
-                <div class="file-upload-subtext">.tif format required</div>
-                <input type="file">
+                <div class="file-upload-subtext">Older .tif image</div>
+
+                <input type="file" id="beforeFile" accept=".tif">
+
+                <div id="beforeStatus"
+                     style="margin-top:10px;color:#16a34a;font-size:14px;">
+                    No file selected
+                </div>
             </label>
 
+            <!-- AFTER -->
             <label class="file-upload">
                 <div class="file-upload-text">Upload After Image</div>
-                <div class="file-upload-subtext">.tif format required</div>
-                <input type="file">
+                <div class="file-upload-subtext">Recent .tif image</div>
+
+                <input type="file" id="afterFile" accept=".tif">
+
+                <div id="afterStatus"
+                     style="margin-top:10px;color:#16a34a;font-size:14px;">
+                    No file selected
+                </div>
             </label>
 
         </div>
 
+        <br>
+
+        <button class="btn-primary" id="runBtn">
+            Run Analysis
+        </button>
+
+        <p id="loading" class="loading-spin"></p>
+
     </div>
 
+    <!-- RESULTS -->
     <div class="card">
-        <h2>Results</h2>
-        <p>Results will appear after backend integration.</p>
+
+        <h2>Results Dashboard</h2>
+
+        <div id="results">
+            Upload both images and click Run Analysis.
+        </div>
+
     </div>
 
 </div>
+
+<script>
+
+/* -------------------------------- */
+/* FILE STATUS */
+/* -------------------------------- */
+
+document.getElementById("beforeFile").addEventListener("change", function(){
+
+    const file = this.files[0];
+
+    document.getElementById("beforeStatus").innerText =
+        file ? "Selected: " + file.name : "No file selected";
+});
+
+document.getElementById("afterFile").addEventListener("change", function(){
+
+    const file = this.files[0];
+
+    document.getElementById("afterStatus").innerText =
+        file ? "Selected: " + file.name : "No file selected";
+});
+
+/* -------------------------------- */
+/* BUTTON */
+/* -------------------------------- */
+
+document.getElementById("runBtn")
+.addEventListener("click", analyzeImages);
+
+/* -------------------------------- */
+/* MAIN */
+/* -------------------------------- */
+
+async function analyzeImages(){
+
+    const before = document.getElementById("beforeFile").files[0];
+    const after  = document.getElementById("afterFile").files[0];
+
+    const loading = document.getElementById("loading");
+    const results = document.getElementById("results");
+
+    if(!before || !after){
+        alert("Please upload both images.");
+        return;
+    }
+
+    loading.innerText = "Analyzing satellite imagery...";
+    results.innerHTML = "";
+
+    const formData = new FormData();
+
+    formData.append("before", before);
+    formData.append("after", after);
+    formData.append("city", "custom");
+
+    try{
+
+        const response = await fetch("http://127.0.0.1:5000/analyze",{
+            method:"POST",
+            body:formData
+        });
+
+        const data = await response.json();
+
+        loading.innerText = "";
+
+        results.innerHTML = `
+
+        <!-- STATS -->
+        <div class="stats-grid">
+
+            <div class="stat-card green-card">
+                🌿 Vegetation Change <br><br>
+                ${data.change["Vegetation Change %"]}%
+            </div>
+
+            <div class="stat-card gray-card">
+                🏙 Other Land Change <br><br>
+                ${data.change["Other Land Change %"]}%
+            </div>
+
+            <div class="stat-card blue-card">
+                💧 Water Change <br><br>
+                ${data.change["Water Change %"]}%
+            </div>
+
+        </div>
+
+        <!-- MAPS -->
+        <div class="map-grid">
+
+            <div class="map-box">
+                <div class="map-title">Before Classification</div>
+                <img src="../outputs/custom_before_map.png?${Date.now()}">
+            </div>
+
+            <div class="map-box">
+                <div class="map-title">After Classification</div>
+                <img src="../outputs/custom_after_map.png?${Date.now()}">
+            </div>
+
+            <div class="map-box">
+                <div class="map-title">Change Detection</div>
+                <img src="../outputs/custom_change_map.png?${Date.now()}">
+            </div>
+
+        </div>
+
+        `;
+    }
+
+    catch(error){
+
+        loading.innerText = "";
+
+        results.innerHTML = `
+            <p style="color:red;">
+                Error connecting to backend.
+            </p>
+        `;
+
+        console.error(error);
+    }
+}
+
+</script>
 
 </body>
 </html>
