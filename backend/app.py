@@ -17,6 +17,11 @@ os.makedirs(OUTPUTS_DIR, exist_ok=True)
 app = Flask(__name__, static_folder=FRONTEND_DIR, static_url_path='')
 CORS(app)
 
+# Health check endpoint
+@app.route("/api/health")
+def health():
+    return jsonify({"status": "ok", "message": "Backend is running"})
+
 # Serve frontend
 @app.route('/')
 def index():
@@ -39,8 +44,12 @@ def serve_static(filename):
 @app.route("/analyze", methods=["POST"])
 def analyze():
     try:
-        before = request.files["before"]
-        after = request.files["after"]
+        before = request.files.get("before")
+        after = request.files.get("after")
+        
+        if not before or not after:
+            return jsonify({"error": "Missing files"}), 400
+
         city = request.form.get("city", "custom")
 
         before_path = os.path.join(UPLOADS_DIR, f"before_{city}.tif")
@@ -48,8 +57,10 @@ def analyze():
 
         before.save(before_path)
         after.save(after_path)
+        
+        print(f"Files saved: {before_path}, {after_path}")
 
-        # Run prediction script
+        # Run prediction script with proper error handling
         result = subprocess.run(
             ["python", "predict.py", city],
             cwd=BASE_DIR,
@@ -59,10 +70,15 @@ def analyze():
         )
 
         if result.returncode != 0:
-            print(f"Prediction error: {result.stderr}")
-            return jsonify({"error": f"Prediction failed: {result.stderr}"}), 500
+            error_msg = result.stderr if result.stderr else result.stdout
+            print(f"Prediction script failed: {error_msg}")
+            return jsonify({"error": f"Prediction failed: {error_msg}"}), 500
 
         result_path = os.path.join(OUTPUTS_DIR, f"{city}_results.json")
+        
+        if not os.path.exists(result_path):
+            print(f"Result file not found: {result_path}")
+            return jsonify({"error": "Result file not created"}), 500
 
         with open(result_path) as f:
             data = json.load(f)
@@ -70,8 +86,11 @@ def analyze():
         return jsonify(data)
 
     except Exception as e:
-        print(f"Analysis error: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        error_msg = str(e)
+        print(f"Analysis error: {error_msg}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": error_msg}), 500
 
 if __name__ == "__main__":
     port = int(os.getenv('PORT', 10000))

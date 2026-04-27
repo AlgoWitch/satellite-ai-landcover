@@ -5,6 +5,8 @@
 
 import numpy as np
 import rasterio
+import matplotlib
+matplotlib.use('Agg')  # Use non-GUI backend for server
 import matplotlib.pyplot as plt
 import os
 import json
@@ -114,38 +116,55 @@ def stats(pred):
 # ---------------------------------
 # MAIN - Run prediction
 # ---------------------------------
-before_img = load_tif(before_path)
-after_img = load_tif(after_path)
+try:
+    if not os.path.exists(before_path):
+        print(f"Error: Before file not found: {before_path}")
+        exit(1)
+    
+    if not os.path.exists(after_path):
+        print(f"Error: After file not found: {after_path}")
+        exit(1)
+    
+    print(f"Loading: {before_path}")
+    before_img = load_tif(before_path)
+    print(f"Loading: {after_path}")
+    after_img = load_tif(after_path)
 
-before = classify_scene(before_img)
-after = classify_scene(after_img)
+    before = classify_scene(before_img)
+    after = classify_scene(after_img)
 
-save_map(before, os.path.join(OUTPUT_DIR, f"{city}_before_map.png"))
-save_map(after, os.path.join(OUTPUT_DIR, f"{city}_after_map.png"))
-save_change_map(before, after, os.path.join(OUTPUT_DIR, f"{city}_change_map.png"))
+    save_map(before, os.path.join(OUTPUT_DIR, f"{city}_before_map.png"))
+    save_map(after, os.path.join(OUTPUT_DIR, f"{city}_after_map.png"))
+    save_change_map(before, after, os.path.join(OUTPUT_DIR, f"{city}_change_map.png"))
 
-b = stats(before)
-a = stats(after)
+    b = stats(before)
+    a = stats(after)
 
-change = {
-    "Vegetation Change %": round(a["Vegetation"]-b["Vegetation"],2),
-    "Other Land Change %": round(a["Other Land"]-b["Other Land"],2),
-    "Water Change %": round(a["Water"]-b["Water"],2)
-}
-
-results = {
-    "city": city,
-    "before": b,
-    "after": a,
-    "change": change,
-    "maps": {
-        "before": f"/outputs/{city}_before_map.png",
-        "after": f"/outputs/{city}_after_map.png",
-        "change": f"/outputs/{city}_change_map.png"
+    change = {
+        "Vegetation Change %": round(a["Vegetation"]-b["Vegetation"],2),
+        "Other Land Change %": round(a["Other Land"]-b["Other Land"],2),
+        "Water Change %": round(a["Water"]-b["Water"],2)
     }
-}
 
-with open(os.path.join(OUTPUT_DIR, f"{city}_results.json"), "w") as f:
-    json.dump(results, f, indent=4)
+    results = {
+        "city": city,
+        "before": b,
+        "after": a,
+        "change": change,
+        "maps": {
+            "before": f"/outputs/{city}_before_map.png",
+            "after": f"/outputs/{city}_after_map.png",
+            "change": f"/outputs/{city}_change_map.png"
+        }
+    }
 
-print("✓ Prediction complete")
+    with open(os.path.join(OUTPUT_DIR, f"{city}_results.json"), "w") as f:
+        json.dump(results, f, indent=4)
+
+    print("✓ Prediction complete")
+
+except Exception as e:
+    print(f"Error: {str(e)}")
+    import traceback
+    traceback.print_exc()
+    exit(1)
