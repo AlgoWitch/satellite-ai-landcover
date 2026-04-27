@@ -1,11 +1,6 @@
 # ==========================================
 # backend/predict.py
-# PREMIUM FINAL VERSION
-# Saves:
-# before map
-# after map
-# change map
-# results json
+# Satellite Change Detection - Prediction
 # ==========================================
 
 import numpy as np
@@ -16,17 +11,18 @@ import json
 import sys
 
 # ---------------------------------
-# CONFIG
+# CONFIG - Use absolute paths
 # ---------------------------------
-DATA_DIR = "../uploads"
-OUTPUT_DIR = "../outputs"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(BASE_DIR, "..", "uploads")
+OUTPUT_DIR = os.path.join(BASE_DIR, "..", "outputs")
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 city = sys.argv[1] if len(sys.argv) > 1 else "custom"
 
-before_path = f"{DATA_DIR}/before_{city}.tif"
-after_path  = f"{DATA_DIR}/after_{city}.tif"
+before_path = os.path.join(DATA_DIR, f"before_{city}.tif")
+after_path = os.path.join(DATA_DIR, f"after_{city}.tif")
 
 # ---------------------------------
 # LOAD TIFF
@@ -116,7 +112,7 @@ def stats(pred):
     }
 
 # ---------------------------------
-# MAIN
+# MAIN - Run prediction
 # ---------------------------------
 before_img = load_tif(before_path)
 after_img = load_tif(after_path)
@@ -124,9 +120,9 @@ after_img = load_tif(after_path)
 before = classify_scene(before_img)
 after = classify_scene(after_img)
 
-save_map(before, f"{OUTPUT_DIR}/{city}_before_map.png")
-save_map(after, f"{OUTPUT_DIR}/{city}_after_map.png")
-save_change_map(before, after, f"{OUTPUT_DIR}/{city}_change_map.png")
+save_map(before, os.path.join(OUTPUT_DIR, f"{city}_before_map.png"))
+save_map(after, os.path.join(OUTPUT_DIR, f"{city}_after_map.png"))
+save_change_map(before, after, os.path.join(OUTPUT_DIR, f"{city}_change_map.png"))
 
 b = stats(before)
 a = stats(after)
@@ -143,13 +139,13 @@ results = {
     "after": a,
     "change": change,
     "maps": {
-        "before": f"../outputs/{city}_before_map.png",
-        "after": f"../outputs/{city}_after_map.png",
-        "change": f"../outputs/{city}_change_map.png"
+        "before": f"/outputs/{city}_before_map.png",
+        "after": f"/outputs/{city}_after_map.png",
+        "change": f"/outputs/{city}_change_map.png"
     }
 }
 
-with open(f"{OUTPUT_DIR}/{city}_results.json", "w") as f:
+with open(os.path.join(OUTPUT_DIR, f"{city}_results.json"), "w") as f:
     json.dump(results, f, indent=4)
 
-print("Premium prediction complete.")
+print("✓ Prediction complete")
