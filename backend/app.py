@@ -16,7 +16,19 @@ os.makedirs(UPLOADS_DIR, exist_ok=True)
 os.makedirs(OUTPUTS_DIR, exist_ok=True)
 
 app = Flask(__name__, static_folder=FRONTEND_DIR, static_url_path='')
-CORS(app)
+
+# Configure CORS - Allow requests from Vercel frontend
+CORS(app, 
+     origins=[
+         "https://satellite-ai-landcover.vercel.app",
+         "http://localhost:3000",
+         "http://localhost:5000",
+         "https://satellite-ai-landcover.onrender.com"
+     ],
+     supports_credentials=True,
+     methods=["GET", "POST", "OPTIONS"],
+     allow_headers=["Content-Type"]
+)
 
 # Error handler for all exceptions
 @app.errorhandler(Exception)
