@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import os
 import json
 import sys
+import gc  # Garbage collection for memory management
 
 # ---------------------------------
 # CONFIG - Use absolute paths
@@ -38,6 +39,14 @@ def load_tif(path):
     img = np.nan_to_num(img, nan=0.0)
     img = img / 10000.0
     img = np.clip(img, 0, 1)
+    
+    # Reduce memory by downsampling large images
+    if img.shape[0] > 512 or img.shape[1] > 512:
+        scale = 512 / max(img.shape[0], img.shape[1])
+        new_h = int(img.shape[0] * scale)
+        new_w = int(img.shape[1] * scale)
+        img = img[::int(1/scale), ::int(1/scale), :]
+        print(f"Downsampled to {new_h}x{new_w} to save memory")
 
     return img
 
@@ -74,12 +83,12 @@ def save_map(pred, path):
     rgb[pred == 1] = [0.75, 0.75, 0.75] # land
     rgb[pred == 2] = [0.0, 0.4, 1.0]    # water
 
-    plt.figure(figsize=(8,8))
+    plt.figure(figsize=(6,6))
     plt.imshow(rgb)
     plt.axis("off")
     plt.tight_layout()
-    plt.savefig(path, dpi=220, bbox_inches="tight")
-    plt.close()
+    plt.savefig(path, dpi=100, bbox_inches="tight")  # Reduced DPI to save memory
+    plt.close('all')  # Clear all figures
 
 # ---------------------------------
 # SAVE CHANGE MAP
@@ -93,12 +102,12 @@ def save_change_map(before, after, path):
     rgb[:] = [0.92, 0.92, 0.92]     # no change
     rgb[changed] = [1.0, 0.15, 0.15] # changed
 
-    plt.figure(figsize=(8,8))
+    plt.figure(figsize=(6,6))
     plt.imshow(rgb)
     plt.axis("off")
     plt.tight_layout()
-    plt.savefig(path, dpi=220, bbox_inches="tight")
-    plt.close()
+    plt.savefig(path, dpi=100, bbox_inches="tight")  # Reduced DPI to save memory
+    plt.close('all')  # Clear all figures
 
 # ---------------------------------
 # PERCENTAGES
@@ -132,10 +141,18 @@ try:
 
     before = classify_scene(before_img)
     after = classify_scene(after_img)
+    
+    # Free memory
+    del before_img, after_img
+    gc.collect()
 
     save_map(before, os.path.join(OUTPUT_DIR, f"{city}_before_map.png"))
     save_map(after, os.path.join(OUTPUT_DIR, f"{city}_after_map.png"))
     save_change_map(before, after, os.path.join(OUTPUT_DIR, f"{city}_change_map.png"))
+    
+    # Free memory
+    del before, after
+    gc.collect()
 
     b = stats(before)
     a = stats(after)
