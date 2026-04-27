@@ -17,18 +17,14 @@ os.makedirs(OUTPUTS_DIR, exist_ok=True)
 
 app = Flask(__name__, static_folder=FRONTEND_DIR, static_url_path='')
 
-# Configure CORS - Allow requests from Vercel frontend
-CORS(app, 
-     origins=[
-         "https://satellite-ai-landcover.vercel.app",
-         "http://localhost:3000",
-         "http://localhost:5000",
-         "https://satellite-ai-landcover.onrender.com"
-     ],
-     supports_credentials=True,
-     methods=["GET", "POST", "OPTIONS"],
-     allow_headers=["Content-Type"]
-)
+# Configure CORS to allow cross-origin requests
+cors_config = {
+    "origins": "*",  # Allow all origins
+    "methods": ["GET", "POST", "OPTIONS"],
+    "allow_headers": ["Content-Type"],
+    "supports_credentials": True
+}
+CORS(app, resources={r"/*": cors_config})
 
 # Error handler for all exceptions
 @app.errorhandler(Exception)
@@ -78,6 +74,31 @@ def test():
             test_data["numpy"] = f"✗ {str(e)}"
         
         return jsonify(test_data)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# Test upload endpoint - check if files can be saved
+@app.route("/api/test-upload", methods=["POST"])
+def test_upload():
+    try:
+        before = request.files.get("before")
+        after = request.files.get("after")
+        
+        if not before or not after:
+            return jsonify({"error": "Missing files"}), 400
+        
+        # Just save files, don't run prediction
+        test_before = os.path.join(UPLOADS_DIR, "test_before.tif")
+        test_after = os.path.join(UPLOADS_DIR, "test_after.tif")
+        
+        before.save(test_before)
+        after.save(test_after)
+        
+        return jsonify({
+            "status": "ok",
+            "before_size": os.path.getsize(test_before),
+            "after_size": os.path.getsize(test_after)
+        })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
