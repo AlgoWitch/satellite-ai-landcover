@@ -7,9 +7,10 @@
 <link rel="stylesheet" href="style.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // Backend URL - Use Render backend
-    const BACKEND_URL = 'https://satellite-ai-landcover.onrender.com';
-    console.log('Backend URL:', BACKEND_URL);
+    // Backend URL - switch between local and Render
+    const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const BACKEND_URL = IS_LOCAL ? 'http://localhost:10000' : 'https://satellite-ai-landcover.onrender.com';
+    console.log('Backend URL:', BACKEND_URL, '| Local:', IS_LOCAL);
 </script>
 </head>
 
@@ -78,6 +79,7 @@
     </div>
 
     <p id="loading" class="status-text center-status"></p>
+    <p id="coldStartHint" class="status-text center-status" style="display:none;font-size:0.8rem;opacity:0.6;">⏳ Server may be waking from sleep — this can take up to 60 seconds on first use.</p>
 
 </section>
 
@@ -186,12 +188,14 @@ async function runAnalysis(){
         alert("Please upload both images.");
         return;
     }
-    
-    // Check file sizes (max 10MB each for free tier)
-    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
-    if(before.size > MAX_SIZE || after.size > MAX_SIZE){
-        alert("File too large! Max 10MB per file for free tier.\n\nTip: Use images smaller than 1000x1000 pixels");
-        return;
+
+    // Show cold-start hint on Render
+    if(!IS_LOCAL){
+        setTimeout(()=>{
+            if(document.getElementById("loading").innerText !== ""){
+                document.getElementById("coldStartHint").style.display="block";
+            }
+        }, 5000);
     }
 
     document.getElementById("loading").innerText=
@@ -205,13 +209,21 @@ async function runAnalysis(){
 
     try{
 
+        // Use longer timeout on Render (free tier is slow)
+        const controller = new AbortController();
+        const timeoutId = IS_LOCAL
+            ? setTimeout(()=>controller.abort(), 120000)  // 2 min locally
+            : setTimeout(()=>controller.abort(), 90000);  // 90s on Render
+
         const response=await fetch(
             `${BACKEND_URL}/analyze`,
             {
                 method:"POST",
-                body:formData
+                body:formData,
+                signal:controller.signal
             }
         );
+        clearTimeout(timeoutId);
 
         const data=await response.json();
         
@@ -250,13 +262,13 @@ async function runAnalysis(){
         const t=Date.now();
 
         document.getElementById("beforeMap").src=
-            "/outputs/custom_before_map.png?"+t;
+            `${BACKEND_URL}/outputs/custom_before_map.png?`+t;
 
         document.getElementById("afterMap").src=
-            "/outputs/custom_after_map.png?"+t;
+            `${BACKEND_URL}/outputs/custom_after_map.png?`+t;
 
         document.getElementById("changeMap").src=
-            "/outputs/custom_change_map.png?"+t;
+            `${BACKEND_URL}/outputs/custom_change_map.png?`+t;
 
         drawChart(veg,land,water);
 
@@ -268,7 +280,11 @@ async function runAnalysis(){
     catch(error){
 
         document.getElementById("loading").innerText="";
-        const errorMsg = error.message || "Backend connection failed";
+        document.getElementById("coldStartHint").style.display="none";
+        let errorMsg = error.message || "Backend connection failed";
+        if(error.name === "AbortError"){
+            errorMsg = "Request timed out. The server may be overloaded — please try again.";
+        }
         alert("Error: " + errorMsg);
         console.error("Full error:", error);
 

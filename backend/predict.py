@@ -149,13 +149,14 @@ try:
     save_map(before, os.path.join(OUTPUT_DIR, f"{city}_before_map.png"))
     save_map(after, os.path.join(OUTPUT_DIR, f"{city}_after_map.png"))
     save_change_map(before, after, os.path.join(OUTPUT_DIR, f"{city}_change_map.png"))
-    
-    # Free memory
-    del before, after
-    gc.collect()
 
+    # Compute stats BEFORE freeing memory
     b = stats(before)
     a = stats(after)
+
+    # Now free memory
+    del before, after
+    gc.collect()
 
     change = {
         "Vegetation Change %": round(a["Vegetation"]-b["Vegetation"],2),
