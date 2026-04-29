@@ -7,10 +7,12 @@
 <link rel="stylesheet" href="style.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // Backend URL - switch between local and Render
+    // Backend URL — auto-detect environment
+    // Local dev: Flask runs on port 10000
+    // Production: Flask serves the frontend too (same origin), so use relative paths
     const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const BACKEND_URL = IS_LOCAL ? 'http://localhost:10000' : 'https://satellite-ai-landcover.onrender.com';
-    console.log('Backend URL:', BACKEND_URL, '| Local:', IS_LOCAL);
+    const BACKEND_URL = IS_LOCAL ? 'http://127.0.0.1:10000' : '';
+    console.log('Backend URL:', BACKEND_URL || '(same-origin)', '| Local:', IS_LOCAL);
 </script>
 </head>
 

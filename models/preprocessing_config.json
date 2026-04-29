@@ -1,0 +1,34 @@
+{
+  "scale_factor": 10000.0,
+  "clip_min": 0.0,
+  "clip_max": 1.0,
+  "band_order": [
+    "NIR",
+    "RED",
+    "GREEN",
+    "BLUE"
+  ],
+  "n_features": 12,
+  "feature_names": [
+    "nir",
+    "red",
+    "green",
+    "blue",
+    "ndvi",
+    "ndwi",
+    "evi",
+    "mndwi",
+    "brightness",
+    "nir_red_ratio",
+    "red_green",
+    "soil_index"
+  ],
+  "classes": {
+    "0": "Vegetation",
+    "1": "Other Land",
+    "2": "Water"
+  },
+  "n_estimators": 150,
+  "max_depth": 20,
+  "accuracy": 0.8288
+}

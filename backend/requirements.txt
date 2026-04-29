@@ -1,9 +1,14 @@
-flask
-flask-cors
-numpy
-pandas
-matplotlib
-rasterio
-scikit-learn
-joblib
-gunicorn
+# SATELLITEX Backend — Python Dependencies
+# Pinned for reproducibility across local and Render deployments
+
+flask==3.0.3
+flask-cors==4.0.1
+gunicorn==22.0.0
+
+numpy==1.26.4
+scipy>=1.11.0
+matplotlib==3.9.1
+
+rasterio==1.3.10
+scikit-learn==1.5.1
+joblib==1.4.2

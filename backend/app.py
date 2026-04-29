@@ -1,199 +1,194 @@
-from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS
+"""
+backend/app.py
+Production Flask Backend — SATELLITEX
+
+Key changes from original:
+- Model loaded ONCE at startup (not per-request via subprocess)
+- predict.run_prediction() called in-process (no subprocess fragility)
+- Timeout raised to 300s for large TIFFs (60-150 MB)
+- File size guard (200 MB max)
+- Proper error messages returned as JSON always
+- CORS fixed for both local and Render production
+"""
+
 import os
-import subprocess
+import sys
 import json
 import traceback
 
-# Get absolute paths
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-FRONTEND_DIR = os.path.join(BASE_DIR, '..', 'frontend')
-UPLOADS_DIR = os.path.join(BASE_DIR, '..', 'uploads')
-OUTPUTS_DIR = os.path.join(BASE_DIR, '..', 'outputs')
+from flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS
+import joblib
 
-# Create directories
+# ── Paths ──────────────────────────────────────────────────────────────────────
+BASE_DIR     = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR     = os.path.abspath(os.path.join(BASE_DIR, ".."))
+FRONTEND_DIR = os.path.join(ROOT_DIR, "frontend")
+UPLOADS_DIR  = os.path.join(ROOT_DIR, "uploads")
+OUTPUTS_DIR  = os.path.join(ROOT_DIR, "outputs")
+MODEL_PATH   = os.path.join(ROOT_DIR, "models", "final_model.pkl")
+
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 os.makedirs(OUTPUTS_DIR, exist_ok=True)
 
-app = Flask(__name__, static_folder=FRONTEND_DIR, static_url_path='')
+# ── Import predict module (in-process, no subprocess) ─────────────────────────
+sys.path.insert(0, BASE_DIR)
+from predict import run_prediction   # noqa: E402
 
-# Configure CORS
+# ── Load Model Once at Startup ─────────────────────────────────────────────────
+print(f"[app] Loading model from {MODEL_PATH} ...")
+if not os.path.exists(MODEL_PATH):
+    raise FileNotFoundError(
+        f"Model not found at {MODEL_PATH}. "
+        "Run backend/train.py first to generate final_model.pkl"
+    )
+MODEL = joblib.load(MODEL_PATH)
+print(f"[app] Model loaded — {type(MODEL).__name__}")
+
+# ── Flask App ──────────────────────────────────────────────────────────────────
+app = Flask(__name__, static_folder=FRONTEND_DIR, static_url_path="")
+
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-# Ensure CORS headers are always sent
+
 @app.after_request
-def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-    response.headers.add('Access-Control-Max-Age', '3600')
+def add_cors_headers(response):
+    response.headers["Access-Control-Allow-Origin"]  = "*"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type,Authorization"
+    response.headers["Access-Control-Allow-Methods"] = "GET,POST,OPTIONS"
     return response
 
-# Error handler for all exceptions
+
 @app.errorhandler(Exception)
 def handle_error(error):
-    """Catch all errors and return JSON instead of HTML"""
-    print(f"ERROR: {str(error)}")
+    print(f"[app] UNHANDLED ERROR: {error}")
     traceback.print_exc()
-    return jsonify({
-        "error": str(error),
-        "type": type(error).__name__
-    }), 500
+    return jsonify({"error": str(error), "type": type(error).__name__}), 500
 
-# Health check endpoint
+
+# ── Health Check ───────────────────────────────────────────────────────────────
 @app.route("/api/health")
 def health():
-    return jsonify({"status": "ok", "message": "Backend is running"})
+    return jsonify({
+        "status": "ok",
+        "model": type(MODEL).__name__,
+        "model_path": MODEL_PATH,
+        "model_exists": os.path.exists(MODEL_PATH),
+    })
 
-# Test endpoint - check if predict.py can be imported
+
+# ── System Info ────────────────────────────────────────────────────────────────
 @app.route("/api/test")
 def test():
+    info = {
+        "status": "ok",
+        "base_dir": BASE_DIR,
+        "uploads_dir": UPLOADS_DIR,
+        "outputs_dir": OUTPUTS_DIR,
+        "model_loaded": MODEL is not None,
+    }
     try:
-        # Try to import predict to check for import errors
-        import sys
-        sys.path.insert(0, BASE_DIR)
-        
-        test_data = {
-            "status": "ok",
-            "base_dir": BASE_DIR,
-            "uploads_dir": UPLOADS_DIR,
-            "outputs_dir": OUTPUTS_DIR,
-            "uploads_exists": os.path.exists(UPLOADS_DIR),
-            "outputs_exists": os.path.exists(OUTPUTS_DIR),
-        }
-        
-        # Check if rasterio can be imported
-        try:
-            import rasterio
-            test_data["rasterio"] = "✓ installed"
-        except ImportError as e:
-            test_data["rasterio"] = f"✗ {str(e)}"
-        
-        # Check if numpy can be imported
-        try:
-            import numpy
-            test_data["numpy"] = "✓ installed"
-        except ImportError as e:
-            test_data["numpy"] = f"✗ {str(e)}"
-        
-        return jsonify(test_data)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# Test upload endpoint - check if files can be saved
-@app.route("/api/test-upload", methods=["POST"])
-def test_upload():
+        import rasterio
+        info["rasterio"] = rasterio.__version__
+    except ImportError as e:
+        info["rasterio"] = f"NOT INSTALLED: {e}"
     try:
-        before = request.files.get("before")
-        after = request.files.get("after")
-        
-        if not before or not after:
-            return jsonify({"error": "Missing files"}), 400
-        
-        # Just save files, don't run prediction
-        test_before = os.path.join(UPLOADS_DIR, "test_before.tif")
-        test_after = os.path.join(UPLOADS_DIR, "test_after.tif")
-        
-        before.save(test_before)
-        after.save(test_after)
-        
-        return jsonify({
-            "status": "ok",
-            "before_size": os.path.getsize(test_before),
-            "after_size": os.path.getsize(test_after)
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        import numpy as np
+        info["numpy"] = np.__version__
+    except ImportError as e:
+        info["numpy"] = f"NOT INSTALLED: {e}"
+    try:
+        import scipy
+        info["scipy"] = scipy.__version__
+    except ImportError:
+        info["scipy"] = "NOT INSTALLED (change maps will be noisier)"
+    return jsonify(info)
 
-# Serve frontend
-@app.route('/')
+
+# ── Serve Frontend ─────────────────────────────────────────────────────────────
+@app.route("/")
 def index():
-    return send_from_directory(FRONTEND_DIR, 'index.html')
+    return send_from_directory(FRONTEND_DIR, "index.html")
 
-@app.route('/analysis.html')
+
+@app.route("/analysis.html")
 def analysis():
-    return send_from_directory(FRONTEND_DIR, 'analysis.html')
+    return send_from_directory(FRONTEND_DIR, "analysis.html")
 
-# Serve output images
-@app.route('/outputs/<path:filename>')
-def serve_outputs(filename):
-    return send_from_directory(OUTPUTS_DIR, filename)
 
-# Serve static assets (CSS, JS, images)
-@app.route('/<path:filename>')
+@app.route("/<path:filename>")
 def serve_static(filename):
     return send_from_directory(FRONTEND_DIR, filename)
 
-@app.route("/analyze", methods=["POST"])
-def analyze():
-    try:
-        print("=== ANALYZE REQUEST START ===")
-        
-        before = request.files.get("before")
-        after = request.files.get("after")
-        
-        if not before or not after:
-            print("ERROR: Missing files")
-            return jsonify({"error": "Missing files"}), 400
 
-        city = request.form.get("city", "custom")
-        print(f"City: {city}")
+# ── Serve Output Images ────────────────────────────────────────────────────────
+@app.route("/outputs/<path:filename>")
+def serve_outputs(filename):
+    return send_from_directory(OUTPUTS_DIR, filename)
+
+
+# ── Main Analyze Endpoint ──────────────────────────────────────────────────────
+MAX_FILE_MB = 200
+
+@app.route("/analyze", methods=["POST", "OPTIONS"])
+def analyze():
+    if request.method == "OPTIONS":
+        return jsonify({"status": "ok"}), 200
+
+    try:
+        print("=== /analyze REQUEST START ===")
+
+        before_file = request.files.get("before")
+        after_file  = request.files.get("after")
+
+        if not before_file or not after_file:
+            return jsonify({"error": "Missing files. Upload both 'before' and 'after' TIFFs."}), 400
+
+        city = request.form.get("city", "custom").strip() or "custom"
+        # Sanitize city name to safe filename
+        city = "".join(c for c in city if c.isalnum() or c in "-_").lower() or "custom"
 
         before_path = os.path.join(UPLOADS_DIR, f"before_{city}.tif")
-        after_path = os.path.join(UPLOADS_DIR, f"after_{city}.tif")
+        after_path  = os.path.join(UPLOADS_DIR, f"after_{city}.tif")
 
-        print(f"Saving files to: {before_path}, {after_path}")
-        before.save(before_path)
-        after.save(after_path)
-        
-        if not os.path.exists(before_path):
-            print(f"ERROR: Before file not saved: {before_path}")
-            return jsonify({"error": "Before file not saved"}), 500
-        
-        if not os.path.exists(after_path):
-            print(f"ERROR: After file not saved: {after_path}")
-            return jsonify({"error": "After file not saved"}), 500
-        
-        print(f"Files exist: before={os.path.getsize(before_path)} bytes, after={os.path.getsize(after_path)} bytes")
+        # Save uploads
+        before_file.save(before_path)
+        after_file.save(after_path)
 
-        # Run prediction script
-        print(f"Running: python predict.py {city} from {BASE_DIR}")
-        result = subprocess.run(
-            ["python", "predict.py", city],
-            cwd=BASE_DIR,
-            capture_output=True,
-            text=True,
-            timeout=120
+        # File size guard
+        for label, fpath in [("before", before_path), ("after", after_path)]:
+            size_mb = os.path.getsize(fpath) / 1e6
+            print(f"  {label}: {size_mb:.1f} MB")
+            if size_mb > MAX_FILE_MB:
+                return jsonify({
+                    "error": f"File '{label}' is {size_mb:.0f} MB — maximum allowed is {MAX_FILE_MB} MB."
+                }), 413
+
+        # In-process prediction (model already loaded)
+        results = run_prediction(
+            before_path=before_path,
+            after_path=after_path,
+            city=city,
+            output_dir=OUTPUTS_DIR,
+            model=MODEL
         )
 
-        print(f"Return code: {result.returncode}")
-        print(f"Stdout: {result.stdout}")
-        print(f"Stderr: {result.stderr}")
+        print("=== /analyze REQUEST SUCCESS ===")
+        return jsonify(results)
 
-        if result.returncode != 0:
-            error_msg = result.stderr if result.stderr else result.stdout
-            print(f"ERROR: Prediction failed")
-            return jsonify({"error": f"Prediction failed: {error_msg}"}), 500
-
-        result_path = os.path.join(OUTPUTS_DIR, f"{city}_results.json")
-        
-        if not os.path.exists(result_path):
-            print(f"ERROR: Result file not found: {result_path}")
-            return jsonify({"error": "Result file not created"}), 500
-
-        print(f"Loading results from: {result_path}")
-        with open(result_path) as f:
-            data = json.load(f)
-
-        print("=== ANALYZE REQUEST SUCCESS ===")
-        return jsonify(data)
+    except ValueError as e:
+        # e.g. wrong band count
+        print(f"[app] ValueError: {e}")
+        return jsonify({"error": str(e)}), 422
 
     except Exception as e:
-        error_msg = str(e)
-        print(f"ERROR: {error_msg}")
+        print(f"[app] ERROR in /analyze: {e}")
         traceback.print_exc()
-        return jsonify({"error": error_msg, "type": type(e).__name__}), 500
+        return jsonify({"error": str(e), "type": type(e).__name__}), 500
 
+
+# ── Entry Point ────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    port = int(os.getenv('PORT', 10000))
+    port = int(os.getenv("PORT", 10000))
+    print(f"[app] Starting on http://0.0.0.0:{port}")
     app.run(host="0.0.0.0", port=port, debug=False)
